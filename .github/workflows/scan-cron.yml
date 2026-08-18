@@ -1,0 +1,20 @@
+name: Scan domain tiap 5 menit
+
+on:
+  schedule:
+    # GitHub Actions cron juga UTC. */5 artinya tiap kelipatan 5 menit.
+    # Catatan: GitHub kadang menunda beberapa menit saat traffic tinggi,
+    # ini normal untuk scheduler gratis — bukan bug di kode kamu.
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {} # supaya bisa juga dipicu manual dari tab Actions
+
+jobs:
+  trigger-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Panggil endpoint scan di Vercel
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SCAN_ENDPOINT_URL }}" \
+            || (echo "Scan gagal atau endpoint tidak merespons 2xx" && exit 1)
