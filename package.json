@@ -1,0 +1,10 @@
+{
+  "name": "nawala-domain-monitor-vercel",
+  "version": "1.0.0",
+  "description": "Backend monitoring Nawala/Domain Down/SSL/Expiry — siap deploy di Vercel (serverless functions)",
+  "private": true,
+  "dependencies": {
+    "@upstash/redis": "^1.34.3",
+    "axios": "^1.7.7"
+  }
+}

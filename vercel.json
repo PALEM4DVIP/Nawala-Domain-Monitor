@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/cron/scan.js": {
+      "maxDuration": 60
+    }
+  }
+}
