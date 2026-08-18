@@ -18,7 +18,8 @@ const {
   formatNawalaAlert,
   formatDomainDownAlert,
   formatSslWarningAlert,
-  formatExpiryReminder
+  formatExpiryReminder,
+  formatDomainSafeAlert // Tambahkan format ini dari telegramBot.js
 } = require('../../lib/telegramBot');
 
 async function scanOneDomain(domainRecord) {
@@ -33,24 +34,45 @@ async function scanOneDomain(domainRecord) {
     checkExpiry(domain).catch((e) => ({ status: 'error', detail: e.message }))
   ]);
 
-  if (nawalaResult.status === 'terblokir' && prevNawala !== 'terblokir') {
+  // Cek apakah ada masalah pada domain
+  const isTerblokir = nawalaResult.status === 'terblokir';
+  const isDown = domainResult.status === 'down';
+  const isSslWarning = sslResult.status === 'warning';
+  const isExpiryReminder = expiryResult.status === 'ok' && expiryResult.needsReminder;
+
+  // 1. Notifikasi jika terblokir Nawala
+  if (isTerblokir) {
     await sendTelegramAlert(formatNawalaAlert(domainRecord));
     await addLog(domainRecord.id, 'nawala', nawalaResult.detail);
   }
 
-  if (domainResult.status === 'down' && prevDomainStatus !== 'down') {
+  // 2. Notifikasi jika domain Down
+  if (isDown) {
     await sendTelegramAlert(formatDomainDownAlert(domainRecord, domainResult.detail));
     await addLog(domainRecord.id, 'domain_down', domainResult.detail);
   }
 
-  if (sslResult.status === 'warning') {
+  // 3. Notifikasi jika ada SSL Warning
+  if (isSslWarning) {
     await sendTelegramAlert(formatSslWarningAlert(domainRecord, sslResult.daysLeft));
     await addLog(domainRecord.id, 'ssl_warning', `Sisa ${sslResult.daysLeft} hari`);
   }
 
-  if (expiryResult.status === 'ok' && expiryResult.needsReminder) {
+  // 4. Notifikasi jika mendekati tanggal Expiry
+  if (isExpiryReminder) {
     await sendTelegramAlert(formatExpiryReminder(domainRecord, expiryResult.daysLeft, expiryResult.expiryDate));
     await addLog(domainRecord.id, 'expiry_reminder', `Sisa ${expiryResult.daysLeft} hari`);
+  }
+
+  // 🟢 5. Notifikasi jika DOMAIN AMAN (Tidak terblokir & tidak down)
+  if (!isTerblokir && !isDown) {
+    // Jika fungsi formatDomainSafeAlert sudah dibuat di telegramBot.js
+    if (typeof formatDomainSafeAlert === 'function') {
+      await sendTelegramAlert(formatDomainSafeAlert(domainRecord));
+    } else {
+      // Fallback pesan jika fungsi format belum ada di telegramBot.js
+      await sendTelegramAlert(`🟢 <b>Domain Aman</b>\nDomain <b>${domainRecord.domain}</b> dalam kondisi normal & bisa diakses.`);
+    }
   }
 
   await updateDomain(domainRecord.id, {
